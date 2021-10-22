@@ -1,0 +1,322 @@
+#!/bin/bash
+#source=LINUX
+#Niruthieka
+error-check () {
+    declare -a arr arrCall arrList marked
+    local seed=$(head -n 1 $1 2>/dev/null)
+    RANDOM=$seed
+    local fileBoard=$(tail -n 5 $1 2>/dev/null)
+    local numLines=$(grep -e "$" -c $1 2>/dev/null) 
+    local line1=$(head -n 1 $1 2>/dev/null)
+    local line1length=$(wc -w <<< $line1 2>/dev/null)
+    local cardNumber=$(wc -w <<< $fileBoard 2>/dev/null)
+    local digits=0
+    if ! [[ -r $1 && -f $1 ]]
+    then
+        echo "input file missing or unreadable" 2>/dev/stderr
+        exit 1
+    fi
+    if [ $numLines -ne 6 ]
+    then
+        echo "input file must have 6 lines" 2>/dev/stderr
+        exit 2
+    fi
+    if ! [[ $line1length = 1 && $line1 =~ ^-?[0-9]+$ ]]
+    then
+        echo "seed line format error" 2>/dev/stderr
+        exit 3
+    fi
+    if [ $cardNumber -eq 25 ]
+    then
+        cardNumber=0
+        for i in $fileBoard
+        do
+            digits=$(wc -m <<< $i)
+            digits=$(($digits-1))
+            if [[ $digits -eq 2 && $i =~ ^-?[0-9]+$ ]]
+            then
+            for j in ${arr[*]}
+                do
+                    if [ $i = $j ]
+                    then
+                        echo "card format error" 2>/dev/stderr
+                        exit 4
+                    fi
+                done
+                arr[$cardNumber]=$i
+                cardNumber=$(($cardNumber+1))
+            else
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            fi
+        done
+    else
+        echo "card format error" 2>/dev/stderr
+        exit 4
+    fi
+    for k in ${!arr[*]}
+    do
+        if [ ${arr[$k]} = 0* ]
+        then
+            if ! [[ ${arr[$k]:1:2} -ge 1 && ${arr[$k]:1:2} -le 9 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            fi
+        elif ! [[ ${arr[$k]} = 0* ]]
+        then
+            if [ $(($k % 5)) == 0 ] && ! [[ ${arr[$k]} -ge 10 && ${arr[$k]} -le 15 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            elif [ $(($k %- 5)) == 1 ] && ! [[ ${arr[$k]} -ge 16 && ${arr[$k]} -le 30 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            elif [ $(($k % 5)) == 2 ] && ! [[ ${arr[$k]} -ge 31 && ${arr[$k]} -le 45 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            elif [ $(($k % 5)) == 3 ] && ! [[ ${arr[$k]} -ge 46 && ${arr[$k]} -le 60 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            elif [ $(($k % 5)) == 4 ] && ! [[ ${arr[$k]} -ge 61 && ${arr[$k]} -le 75 ]]
+            then
+                echo "card format error" 2>/dev/stderr
+                exit 4
+            fi
+        fi
+    done
+    if [ "${arr[12]}" != "00" ]
+    then
+        echo "card format error" 2>/dev/stderr
+        exit 4
+    fi
+    
+    start
+}
+ 
+print-array () {
+    local count=0
+    echo -n "CALL LIST: "
+    for j in ${arrCall[*]}
+    do
+        echo -n "${j} "
+    done
+    echo
+    echo " L   I   N   U   X"
+    if [ "${arr[12]}" = "00" ]
+    then
+        arr[12]="00m "
+        marked[12]="00m "
+    fi  
+    for i in ${!arr[@]}
+    do
+        for j in ${arrList[@]}
+        do
+            if [ "${arr[$i]}" = "$j" ]
+            then
+                arr[$i]="${j}m "
+                marked[$i]="${j}m "
+            fi
+        done
+    done
+    for k in ${arr[*]}
+    do
+        if [[ "$k" =~ .*"m".* ]]
+        then
+            echo -n "$k "
+        else
+            echo -n "$k  "
+        fi
+        count=$(($count+1))
+ 
+        if [ $(($count%5)) -eq 0 ]
+        then
+            echo
+        fi
+    done
+}
+ 
+nextCall () {
+    nextNum=$((1 + $RANDOM % 75))
+    if [ ${#arrCall[@]} -eq 0 ]
+    then
+        if [ $nextNum -ge 1 -a $nextNum -le 15 ] # adds column letter to number
+        then
+            if [ $nextNum -ge 1 -a $nextNum -le 9 ] # checks single digits
+            then
+                nextNum="0${nextNum} "
+                arrList+="${nextNum} "
+            else
+                arrList+="${nextNum} "
+            fi
+            nextNum="L${nextNum}"
+        elif [ $nextNum -ge 16 -a $nextNum -le 30 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="I${nextNum}"
+        elif [ $nextNum -ge 31 -a $nextNum -le 45 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="N${nextNum}"
+        elif [ $nextNum -ge 46 -a $nextNum -le 60 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="U${nextNum}"
+        else
+            arrList+="${nextNum} "
+            nextNum="X${nextNum}"
+        fi
+        arrCall+="${nextNum} "
+    else
+        for i in ${arrList[*]} # check if num already exists else continues 
+        do 
+            if [ "$i" -eq "${nextNum}" ]
+            then
+                start
+            fi
+        done
+        if [ $nextNum -ge 1 -a $nextNum -le 15 ] # adds column letter to number
+        then
+            if [ $nextNum -ge 1 -a $nextNum -le 9 ] # checks single digits
+            then
+                nextNum="0${nextNum} "
+                for j in ${arrList[*]} # check if num already exists else continues 
+                do 
+                    if [ "$j" -eq "${nextNum}" ]
+                    then
+                        start
+                    fi
+                done
+            fi
+            arrList+="${nextNum} "
+            nextNum="L${nextNum}"
+        elif [ $nextNum -ge 16 -a $nextNum -le 30 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="I${nextNum}"
+        elif [ $nextNum -ge 31 -a $nextNum -le 45 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="N${nextNum}"
+        elif [ $nextNum -ge 46 -a $nextNum -le 60 ]
+        then
+            arrList+="${nextNum} "
+            nextNum="U${nextNum}"
+        else
+            arrList+="${nextNum} "
+            nextNum="X${nextNum}"
+        fi
+        arrCall+="${nextNum} "
+    fi
+}
+ 
+checkWinner () {   
+    local c1 c2 c3 c4 c5 corners
+    c1=0
+    c2=0
+    c3=0
+    c4=0
+    c5=0
+    corners=0
+    for i in ${!arr[*]}
+    do
+        for j in ${!marked[*]}
+        do
+            if [ ${marked[$j]} = ${arr[$i]} ]
+            then
+                if [[ $(($i % 5)) == 0 && $(($j % 5)) == 0 ]]
+                then
+                    c1=$(($c1+1))
+                fi
+                if [[ $(($i % 5)) == 1 && $(($j % 5)) == 1 ]]
+                then
+                    c2=$(($c2+1))
+                fi
+                if [[ $(($i % 5)) == 2 && $(($j % 5)) == 2 ]]
+                then
+                    c3=$(($c3+1))
+                fi
+                if [[ $(($i % 5)) == 3 && $(($j % 5)) == 3 ]]
+                then
+                    c4=$(($c4+1))
+                fi
+                if [[ $(($i % 5)) == 4 && $(($j % 5)) == 4 ]]
+                then
+                    c5=$(($c5+1))
+                fi
+                if [[ $i == $j && ($i == 0 || $i == 4 || $i == 20 || $i == 24) ]]
+                then
+                    corners=$(($corners+1))
+                fi
+            fi
+        done
+    done
+    if [[ "${marked[@]:0:5}" = "${arr[@]:0:5}" ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ "${marked[@]:5:5}" = "${arr[@]:5:5}" ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ "${marked[@]:10:5}" = "${arr[@]:10:5}" ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ "${marked[@]:15:5}" = "${arr[@]:15:5}" ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ "${marked[@]:20:5}" = "${arr[@]:20:5}" ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ c1 -eq 5 ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ c2 -eq 5 ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ c3 -eq 5 ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ c4 -eq 5 ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ c5 -eq 5 ]]
+    then
+        echo "WINNER"
+        exit 0
+    elif [[ corners -eq 4 ]]
+    then
+        echo "WINNER"
+        exit 0
+    fi
+}
+ 
+start () {
+    clear
+    print-array
+    nextCall
+    checkWinner
+    read -p "enter any key to get a call or q to quit: " input
+    if [ "$input" = "q" ]
+    then
+        echo "Game has been quit"
+        exit 0
+    else
+        start
+    fi
+}
+ 
+error-check $1
+ 
+ 
+
